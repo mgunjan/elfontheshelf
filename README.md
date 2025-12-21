@@ -3,8 +3,8 @@
 A Reachy Mini application that brings holiday magic to life!
 
 ## Features
-- **Sentry Scout Mode**: Reachy freezes when it sees a human face.
-- **Naughty/Nice Scanner**: Uses voice commands to scan users and determine if they are on the Naughty or Nice list.
+- **Magic Elf Mode**: Reachy acts "Alive" (looks around, plays Jingle Bells) when no one is watching. If a face is detected, it freezes instantly with a "Surprise!" expression.
+- **Procedural Audio**: Generates synthesized audio effects and music real-time without external asset files.
 
 ## Installation
 
