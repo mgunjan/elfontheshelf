@@ -7,13 +7,15 @@ name = "elf_on_shelf"
 version = "0.1.0"
 description = "Elf on the Shelf app for Reachy Mini"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.11"
 dependencies = [
     "reachy-sdk",
     "mediapipe",
     "pyaudio",
     "numpy",
-    "opencv-python-headless"
+    "opencv-python-headless",
+    "grpcio-tools>=1.62.0",
+    "protobuf<5",
 ]
 
 [project.optional-dependencies]
@@ -22,3 +24,6 @@ dev = [
     "black",
     "flake8"
 ]
+
+[tool.setuptools]
+packages = ["elf_on_shelf"]

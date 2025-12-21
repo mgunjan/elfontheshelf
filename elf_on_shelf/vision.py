@@ -4,11 +4,14 @@ import time
 try:
     import cv2
     import mediapipe as mp
+    # Verify critical submodules to avoid later crashes
+    if not hasattr(mp, 'solutions'):
+        raise ImportError("mediapipe.solutions missing")
     import numpy as np
     HAS_VISION_LIBS = True
-except ImportError:
+except (ImportError, AttributeError):
     HAS_VISION_LIBS = False
-    print("Warning: Vision libraries (opencv, mediapipe) not found. VisionSystem will be mocked.")
+    print("Warning: Vision libraries (opencv, mediapipe) not found or broken. VisionSystem will be mocked.")
 
 class VisionSystem:
     def __init__(self, camera_index=0):

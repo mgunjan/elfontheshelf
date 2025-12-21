@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / Build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual Environments
+.venv/
+env/
+venv/
+
+# IDEs
+.vscode/
+.idea/
+
+# UV
+.uv/
+# Note: uv.lock is usually tracked for applications to ensure reproducible builds.
+# If you are building a library, you might want to ignore it.

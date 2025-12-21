@@ -47,7 +47,7 @@ class MockReachy:
             print(f"[Mock] Looking at {x}, {y}, {z}")
 
 class ElfApp(ReachyMiniApp):
-    def __init__(self, reachy_sdk=None):
+    def __init__(self, reachy_sdk=None, host='localhost'):
         super().__init__()
         self.reachy = reachy_sdk
         self._local_sdk = False
@@ -56,7 +56,7 @@ class ElfApp(ReachyMiniApp):
         if self.reachy is None:
             if ReachySDK:
                 try:
-                    self.reachy = ReachySDK(host='localhost')
+                    self.reachy = ReachySDK(host=host)
                     self._local_sdk = True
                 except Exception:
                     pass
@@ -107,5 +107,10 @@ class ElfApp(ReachyMiniApp):
         print("App stopped.")
 
 if __name__ == "__main__":
-    app = ElfApp()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", default="localhost", help="Reachy IP address or hostname")
+    args = parser.parse_args()
+
+    app = ElfApp(host=args.host)
     app.run()
