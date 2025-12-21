@@ -11,23 +11,39 @@ class RobotController:
 
     def set_compliant(self, compliant=False):
         """Set compliance for head and antennas."""
-        for motor in self.reachy.head.motors:
-            motor.compliant = compliant
-        # Check if antennas exist (some models might not have them mapped same way)
-        if hasattr(self.reachy, 'antenna'):
-             for motor in self.reachy.antenna.motors:
-                motor.compliant = compliant
+        if compliant:
+            self.reachy.disable_motors()
+        else:
+            self.reachy.enable_motors()
 
     def freeze(self):
         """Immediately stop movement and hold position."""
         if self.is_frozen:
             return
         self.is_frozen = True
-        # To freeze, we ensure motors are stiff (not compliant) and stop sending new targets.
-        # Assuming Reachy maintains position when target is not updated if stiff.
-        # We can also read current position and set it as target to be sure.
-        for motor in self.reachy.head.motors:
-            motor.target_position = motor.present_position
+        # Read current head pose and set it as target to hold it
+        try:
+            current_head = self.reachy.get_current_head_pose()
+            current_antennas = self.reachy.get_present_antenna_joint_positions()
+            self.reachy.set_target(head=current_head, antennas=current_antennas)
+        except Exception:
+            pass # Fail safe if read fails
+        
+    def express_surprise(self):
+        """Show a 'Guilty/Shocked' expression before freezing."""
+        if self.is_frozen: return
+        
+        # 1. Pop antennas out (Shock!)
+        try:
+            # Wide antennas = Shock
+            self.reachy.set_target(antennas=[0.6, -0.6]) # Instant move
+            # Small delay to let user see the shock
+            time.sleep(0.2)
+        except Exception:
+            pass
+        
+        # 2. Then Freeze
+        self.freeze()
         
     def unfreeze(self):
         """Resume ability to move."""
@@ -35,61 +51,71 @@ class RobotController:
 
     def look_at(self, x, y, z, duration=1.0):
         if self.is_frozen: return
-        self.reachy.head.look_at(x, y, z, duration=duration)
+        self.reachy.look_at_world(x, y, z, duration=duration)
 
-    def scan_idle(self):
-        """Perform a random small movement to look alive."""
+    def act_alive(self):
+        """Perform random, jolly movements to simulate being alive."""
         if self.is_frozen: return
         
-        # Random gentle head movements
+        # Random gentle head movements with a "jolly" cadence
         x = random.uniform(0.3, 0.5)
-        y = random.uniform(-0.3, 0.3)
-        z = random.uniform(-0.2, 0.2)
-        
+        y = random.uniform(-0.4, 0.4)
+        z = random.uniform(-0.1, 0.3)
+        duration = random.uniform(1.0, 2.5)
+
         try:
-            self.reachy.head.look_at(x=x, y=y, z=z, duration=1.5)
-            self.wiggle_antennas()
+            self.reachy.look_at_world(x=x, y=y, z=z, duration=duration)
+            
+            # Occasionally wiggle antennas happily
+            if random.random() > 0.6:
+                self.wiggle_antennas()
         except Exception:
-            pass # Ignore kinematics errors
+            pass # Ignore kinematics errors if target unreachable
 
     def wiggle_antennas(self):
         if self.is_frozen: return
-        # Simple wiggle
-        if hasattr(self.reachy, 'antenna'):
-            # Placeholder for antenna control
+        # Jolly wiggle
+        try:
+            current = self.reachy.get_present_antenna_joint_positions()
+            # Wiggle around current frame or neutral
+            self.reachy.goto_target(antennas=[0.5, -0.5], duration=0.2)
+            time.sleep(0.2)
+            self.reachy.goto_target(antennas=[-0.5, 0.5], duration=0.2)
+            time.sleep(0.2)
+            self.reachy.goto_target(antennas=[0.0, 0.0], duration=0.2) # Return to neutral
+        except Exception:
             pass
 
     def perform_scan_animation(self):
         """Animation for Naughty/Nice scanning."""
-        if self.is_frozen: return # Though this might be overridden by caller
+        if self.is_frozen: return
         
-        # Tilt head up and down
+        # Tilt antennas
         for _ in range(3):
-            self.reachy.head.l_antenna.goal_position = 45
-            self.reachy.head.r_antenna.goal_position = -45
+            self.reachy.goto_target(antennas=[0.8, -0.8], duration=0.3)
             time.sleep(0.3)
-            self.reachy.head.l_antenna.goal_position = -10
-            self.reachy.head.r_antenna.goal_position = 10
+            self.reachy.goto_target(antennas=[-0.2, 0.2], duration=0.3)
             time.sleep(0.3)
 
     def express_joy(self):
         """Happy animation."""
         # Nodding
-        self.reachy.head.look_at(0.5, 0, 0, duration=0.5)
+        self.reachy.look_at_world(0.5, 0, 0, duration=0.5)
         time.sleep(0.5)
-        self.reachy.head.look_at(0.5, 0, -0.2, duration=0.3)
+        self.reachy.look_at_world(0.5, 0, -0.2, duration=0.3)
         time.sleep(0.3)
-        self.reachy.head.look_at(0.5, 0, 0, duration=0.3)
+        self.reachy.look_at_world(0.5, 0, 0, duration=0.3)
 
     def express_sadness(self):
         """Sad animation."""
-        # Look down and shake head slightly
-        self.reachy.head.look_at(0.4, 0, -0.4, duration=1.0)
+        # Look down and shake head
+        self.reachy.look_at_world(0.4, 0, -0.4, duration=1.0)
         time.sleep(1.0)
-        # Shake
-        current_pos = self.reachy.head.neck_yaw.present_position
-        self.reachy.head.neck_yaw.target_position = current_pos + 10
-        time.sleep(0.5)
-        self.reachy.head.neck_yaw.target_position = current_pos - 10
-        time.sleep(0.5)
-        self.reachy.head.neck_yaw.target_position = current_pos
+        
+        # Shake implementation via look_at (approximate)
+        # Ideally would use joint control but look_at is safer
+        self.reachy.look_at_world(0.4, 0.1, -0.4, duration=0.3)
+        time.sleep(0.3)
+        self.reachy.look_at_world(0.4, -0.1, -0.4, duration=0.3)
+        time.sleep(0.3)
+        self.reachy.look_at_world(0.4, 0, -0.4, duration=0.3)

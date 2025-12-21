@@ -70,8 +70,31 @@ class VisionSystem:
                 time.sleep(0.05)
             else:
                 # Mock Loop
+                # "Peekaboo Mode": Toggle face detected every 10 seconds to let users test Surprise Mode
+                now = time.time()
+                # 10s cycle: 0-5s = No Face (Alive), 5-10s = Face (Surprise/Freeze)
+                if (now % 20) > 10: 
+                     # 10 seconds of "Face Detected"
+                     if not self.face_detected:
+                        # Log only on edge
+                        # print("[MockVision] Peekaboo! Face Detected (Testing Surprise Mode)")
+                        pass
+                     self.face_detected = True
+                else:
+                     # 10 seconds of "No Face"
+                     if self.face_detected:
+                        # print("[MockVision] Face Gone (Testing Alive Mode)")
+                        pass
+                     self.face_detected = False
+                
                 time.sleep(0.1)
 
 
     def is_face_present(self):
         return self.face_detected
+
+    def get_faces(self):
+        """Returns a list of detected faces (mocks logic for MagicMode compatibility)."""
+        if self.face_detected:
+            return [{"bbox": [0,0,1,1]}] # fast dummy response
+        return []

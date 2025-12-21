@@ -9,13 +9,11 @@ description = "Elf on the Shelf app for Reachy Mini"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "reachy-sdk",
     "mediapipe",
     "pyaudio",
     "numpy",
     "opencv-python-headless",
-    "grpcio-tools>=1.62.0",
-    "protobuf<5",
+    "reachy-mini[mujoco]>=1.2.3",
 ]
 
 [project.optional-dependencies]
