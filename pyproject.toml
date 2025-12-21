@@ -5,15 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "elf_on_shelf"
 version = "0.1.0"
-description = "Elf on the Shelf app for Reachy Mini"
+description = "Elf on the Shelf app for Reachy Mini - Magic Elf Mode with surprise expressions"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "mediapipe",
-    "pyaudio",
     "numpy",
-    "opencv-python-headless",
-    "reachy-mini[mujoco]>=1.2.3",
+    "opencv-python",
+    "reachy-mini>=1.2.3",
 ]
 
 [project.optional-dependencies]
@@ -22,6 +20,13 @@ dev = [
     "black",
     "flake8"
 ]
+mujoco = [
+    "reachy-mini[mujoco]>=1.2.3",
+]
 
 [tool.setuptools]
-packages = ["elf_on_shelf"]
+packages = ["elf_on_shelf", "elf_on_shelf.behaviors"]
+
+# Entry point for Reachy Mini App discovery
+[project.entry-points.reachy_mini_apps]
+elf_on_shelf = "elf_on_shelf.main:ElfOnShelf"
