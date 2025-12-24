@@ -20,30 +20,30 @@ class SoundGenerator:
             print(f"[Sound] Audio initialized: {reachy_mini.media.audio is not None}")
 
     def play_jingle_bells(self):
-        """Play wake_up.wav sound on robot."""
+        """Play jingle.wav sound on robot."""
         if self.reachy_mini is None:
             return
         if not self._lock.acquire(blocking=False):
             return
         
         try:
-            print("[Sound] 🎶 Playing wake_up.wav...")
-            self.reachy_mini.media.play_sound("wake_up.wav")
+            print("[Sound] 🎶 Playing jingle.wav...")
+            self.reachy_mini.media.play_sound("jingle.wav")
         except Exception as e:
             print(f"[Sound] Error: {e}")
         finally:
             self._lock.release()
 
     def play_surprise(self):
-        """Play go_sleep.wav sound on robot."""
+        """Play surprise.wav sound on robot."""
         if self.reachy_mini is None:
             return
         if not self._lock.acquire(blocking=False):
             return
         
         try:
-            print("[Sound] ❗ Playing go_sleep.wav...")
-            self.reachy_mini.media.play_sound("go_sleep.wav")
+            print("[Sound] ❗ Playing surprise.wav...")
+            self.reachy_mini.media.play_sound("surprise.wav")
         except Exception as e:
             print(f"[Sound] Error: {e}")
         finally:
