@@ -1,7 +1,6 @@
 import time
 import random
 import threading
-import numpy as np
 
 class RobotController:
     def __init__(self, reachy):
@@ -26,8 +25,8 @@ class RobotController:
             current_head = self.reachy.get_current_head_pose()
             current_antennas = self.reachy.get_present_antenna_joint_positions()
             self.reachy.set_target(head=current_head, antennas=current_antennas)
-        except Exception:
-            pass # Fail safe if read fails
+        except Exception as e:
+            print(f"[Motion] Freeze error: {e}")
         
     def express_surprise(self):
         """Show a 'Guilty/Shocked' expression before freezing."""
@@ -39,8 +38,8 @@ class RobotController:
             self.reachy.set_target(antennas=[0.6, -0.6]) # Instant move
             # Small delay to let user see the shock
             time.sleep(0.2)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[Motion] Express surprise error: {e}")
         
         # 2. Then Freeze
         self.freeze()
@@ -69,8 +68,8 @@ class RobotController:
             # Occasionally wiggle antennas happily
             if random.random() > 0.6:
                 self.wiggle_antennas()
-        except Exception:
-            pass # Ignore kinematics errors if target unreachable
+        except Exception as e:
+            print(f"[Motion] Act alive error: {e}")
 
     def wiggle_antennas(self):
         if self.is_frozen: return
@@ -83,8 +82,8 @@ class RobotController:
             self.reachy.goto_target(antennas=[-0.5, 0.5], duration=0.2)
             time.sleep(0.2)
             self.reachy.goto_target(antennas=[0.0, 0.0], duration=0.2) # Return to neutral
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[Motion] Wiggle antennas error: {e}")
 
     def perform_scan_animation(self):
         """Animation for Naughty/Nice scanning."""

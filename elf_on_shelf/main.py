@@ -1,125 +1,78 @@
-"""Elf on the Shelf App for Reachy Mini.
-
-Magic Elf Mode: The robot acts "alive" when no one is watching,
-but freezes instantly when a face is detected with a surprise expression.
-"""
+"""Minimal audio test app - just plays sound on startup."""
 
 import time
 import threading
-import random
+from typing import Optional
 
 from reachy_mini import ReachyMini, ReachyMiniApp
-from reachy_mini.utils import create_head_pose
-
-from .vision import VisionSystem
-from .motion import RobotController
-from .audio_generator import sound_player
-
-
-class MagicMode:
-    """
-    Magic Elf Mode:
-    - If Face Detected: FREEZE immediately with surprise expression
-    - If No Face: Act alive (random movements, occasional jingle bells)
-    """
-    def __init__(self, motion_ctrl, vision_sys):
-        self.motion = motion_ctrl
-        self.vision = vision_sys
-        self.is_frozen = False
-
-    def update(self):
-        faces = self.vision.get_faces()
-        
-        if faces:
-            # Face detected! Freeze!
-            if not self.is_frozen:
-                print("[MagicMode] Face detected! FREEZE!")
-                sound_player.play_surprise()
-                self.motion.express_surprise()
-                self.is_frozen = True
-        else:
-            # No face detected. Come alive.
-            if self.is_frozen:
-                print("[MagicMode] Coast clear. Unfreezing...")
-                self.motion.unfreeze()
-                self.is_frozen = False
-            
-            # Perform alive behaviors if not frozen
-            self.motion.act_alive()
-            # Chance to play jingle bells (~5% per loop)
-            if random.random() > 0.95:
-                threading.Thread(target=sound_player.play_jingle_bells, daemon=True).start()
 
 
 class ElfOnShelf(ReachyMiniApp):
-    """Elf on the Shelf App - Magic Elf Mode.
+    """Minimal app to test audio."""
     
-    When run from the Reachy Mini dashboard, the robot will:
-    - Look around randomly and wiggle antennas when no one is watching
-    - Play "Jingle Bells" occasionally
-    - Freeze instantly with a "Surprise!" expression when a face is detected
-    """
-    
-    # Optional: URL to a custom configuration page for the app
-    custom_app_url: str | None = None
+    custom_app_url: Optional[str] = None
+    request_media_backend: Optional[str] = None  # Let SDK auto-detect
 
-    def run(self, reachy_mini: ReachyMini, stop_event: threading.Event):
-        """Main app loop - called by the dashboard.
+    def run(self, reachy_mini: ReachyMini, stop_event: threading.Event) -> None:
+        """Just play sound and wiggle antennas."""
+        print("=" * 50)
+        print("MINIMAL AUDIO TEST START")
+        print("=" * 50)
         
-        Args:
-            reachy_mini: Already connected ReachyMini instance
-            stop_event: Event to signal app shutdown
-        """
-        print("🎄 Starting Elf on the Shelf App (Magic Mode)... 🎄")
+        # Log everything about media
+        print(f"Media manager: {reachy_mini.media}")
+        print(f"Media backend: {reachy_mini.media_manager.backend if hasattr(reachy_mini, 'media_manager') else 'unknown'}")
+        print(f"Audio object: {reachy_mini.media.audio}")
+        print(f"Camera object: {reachy_mini.media.camera}")
         
-        # Initialize subsystems
-        vision = VisionSystem(reachy_mini=reachy_mini)
-        motion = RobotController(reachy_mini)
-        sound_player.set_reachy(reachy_mini)
-        
-        magic_mode = MagicMode(motion, vision)
-        
-        # Start vision processing
-        vision.start()
-        
+        # Try to play sound immediately
+        print("\n[TEST] Attempting play_sound('wake_up.wav')...")
         try:
-            while not stop_event.is_set():
-                magic_mode.update()
-                time.sleep(0.1)
+            reachy_mini.media.play_sound("wake_up.wav")
+            print("[TEST] ✅ play_sound() completed without exception")
         except Exception as e:
-            print(f"[ElfApp] Error: {e}")
-        finally:
-            vision.stop()
-            print("🎄 Elf on the Shelf App stopped. 🎄")
-
-
-# For standalone testing (python -m elf_on_shelf.main)
-if __name__ == "__main__":
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="Elf on the Shelf for Reachy Mini")
-    parser.add_argument("--host", default="localhost", help="Reachy hostname (localhost or reachy-mini.local)")
-    args = parser.parse_args()
-    
-    print("Running in standalone mode...")
-    print("For proper deployment, use: reachy-mini-app-assistant publish")
-    
-    # Connect manually for standalone testing
-    is_local = (args.host == 'localhost' or args.host == '127.0.0.1')
-    print(f"Connecting to Reachy Mini (localhost_only={is_local})...")
-    
-    try:
-        reachy = ReachyMini(robot_name='reachy_mini', localhost_only=is_local)
-        print("✅ Connected!")
+            print(f"[TEST] ❌ play_sound() FAILED: {type(e).__name__}: {e}")
         
-        stop_event = threading.Event()
-        app = ElfOnShelf()
+        # Wait for sound
+        time.sleep(2)
         
+        # Try after calling start_playing
+        print("\n[TEST] Calling start_recording() + start_playing()...")
         try:
-            app.run(reachy, stop_event)
-        except KeyboardInterrupt:
-            print("\nStopping...")
-            stop_event.set()
-    except Exception as e:
-        print(f"❌ Connection failed: {e}")
-        print("Make sure the Reachy Mini daemon is running.")
+            reachy_mini.media.start_recording()
+            print("[TEST] ✅ start_recording() OK")
+        except Exception as e:
+            print(f"[TEST] ❌ start_recording() FAILED: {e}")
+            
+        try:
+            reachy_mini.media.start_playing()
+            print("[TEST] ✅ start_playing() OK")
+        except Exception as e:
+            print(f"[TEST] ❌ start_playing() FAILED: {e}")
+        
+        time.sleep(1)
+        
+        print("\n[TEST] Attempting play_sound('go_sleep.wav') AFTER pipeline init...")
+        try:
+            reachy_mini.media.play_sound("go_sleep.wav")
+            print("[TEST] ✅ play_sound() completed without exception")
+        except Exception as e:
+            print(f"[TEST] ❌ play_sound() FAILED: {type(e).__name__}: {e}")
+        
+        time.sleep(2)
+        
+        # Wiggle antennas to show we're done
+        print("\n[TEST] Wiggling antennas to signal end...")
+        try:
+            reachy_mini.goto_target(antennas=[1.0, 1.0], duration=0.5)
+            time.sleep(1)
+            reachy_mini.goto_target(antennas=[0.0, 0.0], duration=0.5)
+        except:
+            pass
+        
+        print("\n" + "=" * 50)
+        print("MINIMAL AUDIO TEST COMPLETE")
+        print("=" * 50)
+        
+        # Keep running briefly
+        time.sleep(3)
