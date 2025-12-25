@@ -32,6 +32,6 @@ class SentryMode:
         
         # Periodic idle movements
         if time.time() > self.next_idle_move_time:
-            self.controller.scan_idle()
+            self.controller.act_alive()
             # Schedule next move in 3-8 seconds
             self.next_idle_move_time = time.time() + random.uniform(3.0, 8.0)
