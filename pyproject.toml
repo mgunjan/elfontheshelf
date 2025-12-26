@@ -7,13 +7,11 @@ name = "elf_on_shelf"
 version = "0.1.0"
 description = "Elf on the Shelf app for Reachy Mini - Magic Elf Mode with surprise expressions"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     "reachy-mini>=1.2.3",
     "opencv-python>=4.12.0.88",
 ]
-
-
 
 [tool.setuptools]
 packages = ["elf_on_shelf", "elf_on_shelf.behaviors", "elf_on_shelf.assets"]
@@ -23,5 +21,5 @@ include-package-data = true
 "elf_on_shelf.assets" = ["*.xml", "*.wav"]
 
 # Entry point for Reachy Mini App discovery
-[project.entry-points.reachy_mini_apps]
+[project.entry-points."reachy_mini_apps"]
 elf_on_shelf = "elf_on_shelf.main:ElfOnShelf"

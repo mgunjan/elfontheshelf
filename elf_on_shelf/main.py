@@ -1,15 +1,32 @@
 """Elf on the Shelf - Magic Elf Mode for Reachy Mini."""
 
+import sys
 import time
 import random
 import threading
+import traceback
 from typing import Optional
 
-from reachy_mini import ReachyMini, ReachyMiniApp
+# Ensure standard output is flushed immediately for logs
+sys.stdout.reconfigure(line_buffering=True)
 
-from .vision import VisionSystem
-from .audio_generator import sound_player
-from .motion import RobotController
+try:
+    from reachy_mini import ReachyMini, ReachyMiniApp
+except ImportError:
+    print("CRITICAL: Could not import reachy_mini module!")
+    sys.exit(1)
+
+# Import other modules - allow failure for debugging
+try:
+    from .vision import VisionSystem
+    from .audio_generator import sound_player
+    from .motion import RobotController
+except ImportError as e:
+    print(f"CRITICAL: Failed to import local modules: {e}")
+    # Define dummy classes to prevent ImportErrors from stopping the app manager immediately
+    VisionSystem = None
+    sound_player = None
+    RobotController = None
 
 
 class ElfOnShelf(ReachyMiniApp):
@@ -27,10 +44,15 @@ class ElfOnShelf(ReachyMiniApp):
         print("🎄 ELF ON THE SHELF - MAGIC ELF MODE 🎄")
         print("=" * 60)
         
+        # Check for imports
+        if VisionSystem is None or sound_player is None or RobotController is None:
+            print("❌ Start aborted: Local modules failed to import.")
+            return
+
         # Initialize subsystems
         print("\n[Init] Initializing subsystems...")
         
-        # Enable motors
+        # 1. Enable motors
         try:
             print("[Init] Enabling motors...")
             reachy_mini.enable_motors()
@@ -38,31 +60,36 @@ class ElfOnShelf(ReachyMiniApp):
         except Exception as e:
             print(f"[Init] Warning - motor enable: {e}")
         
-        # Initialize media (audio/camera)
+        # 2. Initialize media (audio/camera)
         try:
             print("[Init] Starting media pipeline...")
-            reachy_mini.media.start_recording()
-            time.sleep(0.5)
-            reachy_mini.media.start_playing()
-            time.sleep(1.0)  # Give media time to fully initialize
-            print("[Init] ✅ Media pipeline ready")
+            if reachy_mini.media:
+                reachy_mini.media.start_recording()
+                time.sleep(0.5)
+                reachy_mini.media.start_playing()
+                time.sleep(1.0)
+                print("[Init] ✅ Media pipeline ready")
+            else:
+                print("[Init] ⚠️  Media manager is None!")
         except Exception as e:
             print(f"[Init] ⚠️  Media initialization warning: {e}")
         
-        # Set up vision system
-        vision = VisionSystem(reachy_mini=reachy_mini)
-        vision.start()
-        print("[Init] ✅ Vision system started")
+        # 3. Set up subsystems
+        try:
+            vision = VisionSystem(reachy_mini=reachy_mini)
+            vision.start()
+            print("[Init] ✅ Vision system started")
+            
+            sound_player.set_reachy(reachy_mini)
+            print("[Init] ✅ Audio system ready")
+            
+            controller = RobotController(reachy_mini)
+            print("[Init] ✅ Motion controller ready")
+        except Exception as e:
+            print(f"[Init] ❌ Subsystem initialization failed: {e}")
+            return
         
-        # Set up audio
-        sound_player.set_reachy(reachy_mini)
-        print("[Init] ✅ Audio system ready")
-        
-        # Set up motion controller
-        controller = RobotController(reachy_mini)
-        print("[Init] ✅ Motion controller ready")
-        
-        # State tracking
+        # State variables
         was_face_detected = False
         last_jingle_time = time.time()
         next_jingle_delay = random.uniform(10.0, 15.0)
@@ -75,37 +102,38 @@ class ElfOnShelf(ReachyMiniApp):
         print("   - Face detected: FREEZE with surprise!")
         print("=" * 60 + "\n")
         
-        # Main behavior loop
         try:
             while not stop_event.is_set():
                 current_time = time.time()
+                
+                # Check for face (safely)
                 face_detected = vision.is_face_present()
                 
-                # Detect state transitions
+                # State Logic
                 if face_detected and not was_face_detected:
-                    # FACE JUST APPEARED - SURPRISE!
+                    # Case 1: Just caught!
                     print("\n👀 FACE DETECTED! Freezing with surprise...")
                     controller.express_surprise()
                     sound_player.play_surprise()
                     was_face_detected = True
                     
                 elif face_detected and was_face_detected:
-                    # FACE STILL PRESENT - STAY FROZEN
+                    # Case 2: Still being watched
                     controller.freeze()
                     
                 elif not face_detected and was_face_detected:
-                    # FACE DISAPPEARED - RESUME BEING ALIVE
+                    # Case 3: Coast is clear
                     print("\n😊 Face gone! Resuming alive mode...")
                     controller.unfreeze()
                     was_face_detected = False
-                    # Reset timers
+                    # Reset timers to avoid instant action
                     last_movement_time = current_time
                     next_movement_delay = random.uniform(3.0, 6.0)
                     last_jingle_time = current_time
                     next_jingle_delay = random.uniform(10.0, 15.0)
                     
                 else:
-                    # NO FACE - ACT ALIVE
+                    # Case 4: Idling (Alive mode)
                     # Periodic movements
                     if current_time - last_movement_time > next_movement_delay:
                         print("🤖 Acting alive (looking around)...")
@@ -120,38 +148,31 @@ class ElfOnShelf(ReachyMiniApp):
                         last_jingle_time = current_time
                         next_jingle_delay = random.uniform(10.0, 15.0)
                 
-                # Check for stop event frequently
+                # Small sleep to prevent CPU hogging
                 time.sleep(0.1)
                 
         except KeyboardInterrupt:
-            print("\n\n[Shutdown] Keyboard interrupt received")
+            print("\n[Shutdown] Keyboard interrupt")
         except Exception as e:
-            print(f"\n\n[Error] Unexpected error: {e}")
-            import traceback
+            print(f"\n[Error] Main loop error: {e}")
             traceback.print_exc()
         finally:
-            # Cleanup
             print("\n[Shutdown] Cleaning up...")
-            
             try:
                 vision.stop()
-                print("[Shutdown] ✅ Vision system stopped")
-            except Exception as e:
-                print(f"[Shutdown] Vision stop error: {e}")
-            
-            try:
                 controller.unfreeze()
-                print("[Shutdown] ✅ Robot unfrozen")
-            except Exception as e:
-                print(f"[Shutdown] Unfreeze error: {e}")
-            
-            try:
                 reachy_mini.disable_motors()
-                print("[Shutdown] ✅ Motors disabled")
-            except Exception as e:
-                print(f"[Shutdown] Motor disable error: {e}")
-            
-            print("\n" + "=" * 60)
+            except Exception:
+                pass
             print("🎄 Elf on the Shelf - Goodbye! 🎄")
-            print("=" * 60)
+
+
+if __name__ == "__main__":
+    app = ElfOnShelf()
+    try:
+        app.wrapped_run()
+    except KeyboardInterrupt:
+        app.stop()
+
+
 

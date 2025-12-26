@@ -6,15 +6,26 @@ import time
 # Try to import OpenCV for face detection
 try:
     import cv2
+    import os
     from pathlib import Path
     
-    # Use bundled asset if available
-    bundled_cascade = Path(__file__).parent / "assets" / "haarcascade_frontalface_default.xml"
-    if bundled_cascade.exists():
-        cascade_path = str(bundled_cascade)
-    else:
-        cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+    def find_asset(filename):
+        candidates = [
+            Path(__file__).parent / "assets" / filename,
+            Path(os.getcwd()) / "elf_on_shelf" / "assets" / filename,
+            Path(os.getcwd()) / "assets" / filename,
+            Path(__file__).parent.parent / "elf_on_shelf" / "assets" / filename,
+        ]
+        for cand in candidates:
+            if cand.exists():
+                return str(cand)
         
+        # Fallback to system default
+        return cv2.data.haarcascades + filename
+
+    cascade_path = find_asset('haarcascade_frontalface_default.xml')
+    print(f"[Vision] Loading cascade from: {cascade_path}")
+    
     FACE_CASCADE = cv2.CascadeClassifier(cascade_path)
     if FACE_CASCADE.empty():
         raise ValueError('Failed to load Haar cascade')
@@ -85,8 +96,8 @@ class VisionSystem:
                         faces = FACE_CASCADE.detectMultiScale(
                             gray,
                             scaleFactor=1.1,
-                            minNeighbors=5,
-                            minSize=(30, 30)
+                            minNeighbors=8,  # Increased from 5 to reduce false positives
+                            minSize=(60, 60) # Increased from 30x30 to avoid noise
                         )
                         with self._lock:
                             self.face_detected = len(faces) > 0

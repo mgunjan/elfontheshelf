@@ -22,3 +22,4 @@ venv/
 .uv/
 # Note: uv.lock is usually tracked for applications to ensure reproducible builds.
 # If you are building a library, you might want to ignore it.
+__pycache__/
